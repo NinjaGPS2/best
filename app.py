@@ -14,6 +14,12 @@ import models
 app = Flask(__name__)
 app.secret_key = "edc_cambodia_billing_secret_key_2024"
 
+# Auto-initialize database on application startup
+try:
+    init_db()
+except Exception as e:
+    print(f"DB Init note: {e}")
+
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER

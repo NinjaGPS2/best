@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}កំណត់តារាងតម្លៃតាមកម្រិត (Tiered Tariffs) | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-sliders" style="color: #0284c7;"></i> តារាងតម្លៃបង់តាមកម្រិត (Tiered Tariffs Configuration)</h1>
+        <p>កំណត់តម្លៃឯកតាតាមកម្រិត kWh ថ្លៃថែទាំនាឡិកាស្ទង់ និងពន្ធអាករ (VAT) សម្រាប់ប្រភេទអតិថិជននីមួយៗ</p>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+    {% for t in tariffs %}
+    <div class="panel-card" style="border-top: 4px solid {% if t.customer_type == 'residential' %}#0284c7{% elif t.customer_type == 'commercial' %}#8b5cf6{% else %}#f59e0b{% endif %};">
+        <div class="panel-header">
+            <h3>
+                <i class="fa-solid fa-bolt" style="color: {% if t.customer_type == 'residential' %}#0284c7{% elif t.customer_type == 'commercial' %}#8b5cf6{% else %}#f59e0b{% endif %};"></i>
+                {{ t.customer_type | khmer_type }}
+            </h3>
+            <span class="badge badge-{{ t.customer_type }}">{{ t.customer_type }}</span>
+        </div>
+        <div class="panel-body">
+            <form action="{{ url_for('tariffs_update') }}" method="POST">
+                <input type="hidden" name="tariff_id" value="{{ t.id }}">
+
+                <div class="form-group">
+                    <label class="form-label">កម្រិត ១ (0 - 50 kWh) - តម្លៃ A (រៀល/kWh)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" step="1" name="tier1_rate" class="form-control" value="{{ t.tier1_rate }}" required>
+                        <span style="font-weight: 600; color: #64748b;">៛</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កម្រិត ២ (51 - 100 kWh) - តម្លៃ B (រៀល/kWh)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" step="1" name="tier2_rate" class="form-control" value="{{ t.tier2_rate }}" required>
+                        <span style="font-weight: 600; color: #64748b;">៛</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កម្រិត ៣ (> 100 kWh) - តម្លៃ C (រៀល/kWh)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" step="1" name="tier3_rate" class="form-control" value="{{ t.tier3_rate }}" required>
+                        <span style="font-weight: 600; color: #64748b;">៛</span>
+                    </div>
+                </div>
+
+                <hr style="margin: 16px 0; border: none; border-top: 1px dashed #cbd5e1;">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ថ្លៃថែទាំនាឡិកា</label>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <input type="number" step="100" name="maintenance_fee" class="form-control" value="{{ t.maintenance_fee }}">
+                            <span style="font-weight: 600; color: #64748b;">៛</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ពន្ធអាករ (VAT)</label>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <input type="number" step="1" name="vat_percent" class="form-control" value="{{ t.vat_percent }}">
+                            <span style="font-weight: 600; color: #64748b;">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fa-solid fa-floppy-disk"></i> រក្សាទុកតម្លៃថ្មី
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រង និងអនុម័តអ្នកប្រើប្រាស់ | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-users-gear" style="color: #0284c7;"></i> គ្រប់គ្រង និងអនុម័តអ្នកប្រើប្រាស់ (User Management)</h1>
+        <p>ត្រួតពិនិត្យ និងអនុម័តគណនីបុគ្គលិកដែលបានចុះឈ្មោះថ្មី ដើម្បីឱ្យពួកគេអាច Login ចូលប្រើប្រាស់ប្រព័ន្ធ</p>
+    </div>
+</div>
+
+{% if pending_total > 0 %}
+<div class="panel-card" style="background: #fffbeb; border-left: 4px solid #f59e0b; margin-bottom: 24px;">
+    <div class="panel-body" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <i class="fa-solid fa-bell" style="font-size: 24px; color: #d97706;"></i>
+            <div>
+                <strong style="color: #b45309; font-size: 15px;">មាន {{ pending_total }} គណនីកំពុងរង់ចាំការអនុម័តពីលោកអ្នក!</strong>
+                <p style="font-size: 12.5px; color: #92400e; margin-top: 2px;">
+                    សូមពិនិត្យឈ្មោះ និងលេខទូរសព្ទខាងក្រោម រួចចុច "អនុម័ត (Approve)" ដើម្បីអនុញ្ញាតឱ្យបុគ្គលិកចូលប្រើប្រាស់។
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Users Table -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-user-shield"></i> បញ្ជីអ្នកប្រើប្រាស់ទាំងអស់ ({{ users|length }})</h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ឈ្មោះពេញ</th>
+                        <th>ឈ្មោះគណនី (Username)</th>
+                        <th>លេខទូរសព្ទ</th>
+                        <th>តួនាទី</th>
+                        <th>ស្ថានភាពគណនី</th>
+                        <th>កាលបរិច្ឆេទចុះឈ្មោះ</th>
+                        <th>អ្នកអនុម័ត</th>
+                        <th style="text-align: right;">សកម្មភាពអនុម័ត</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr style="{% if u.status == 'pending' %}background-color: #fefce8;{% endif %}">
+                        <td>
+                            <strong style="font-size: 14px;">{{ u.full_name }}</strong>
+                        </td>
+                        <td>
+                            <code style="font-size: 13px; font-weight: 700; color: #0284c7;">{{ u.username }}</code>
+                        </td>
+                        <td>{{ u.phone or '-' }}</td>
+                        <td>
+                            {% if u.role == 'admin' %}
+                                <span class="badge" style="background: #e0e7ff; color: #4338ca; font-weight: 700;">
+                                    <i class="fa-solid fa-shield-halved"></i> Admin
+                                </span>
+                            {% else %}
+                                <span class="badge" style="background: #f1f5f9; color: #475569;">
+                                    <i class="fa-solid fa-user"></i> បុគ្គលិក (Staff)
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set b_class, b_label = u.status | status_badge %}
+                            <span class="badge {{ b_class }}">
+                                {% if u.status == 'pending' %}<i class="fa-solid fa-clock"></i>{% endif %}
+                                {{ b_label }}
+                            </span>
+                        </td>
+                        <td style="font-size: 12px; color: #64748b;">{{ u.created_at[:16] }}</td>
+                        <td style="font-size: 12px; color: #475569;">{{ u.approved_by or '-' }}</td>
+                        <td style="text-align: right;">
+                            <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                                {% if u.status == 'pending' %}
+                                    <form action="{{ url_for('user_approve', id=u.id) }}" method="POST" style="margin: 0;">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="fa-solid fa-check"></i> អនុម័ត (Approve)
+                                        </button>
+                                    </form>
+                                    <form action="{{ url_for('user_reject', id=u.id) }}" method="POST" style="margin: 0;">
+                                        <button type="submit" class="btn btn-warning btn-sm">
+                                            <i class="fa-solid fa-ban"></i> បដិសេធ
+                                        </button>
+                                    </form>
+                                {% elif u.status == 'rejected' %}
+                                    <form action="{{ url_for('user_approve', id=u.id) }}" method="POST" style="margin: 0;">
+                                        <button type="submit" class="btn btn-outline btn-sm" style="color: #10b981; border-color: #10b981;">
+                                            <i class="fa-solid fa-rotate-left"></i> ដំណើរការឡើងវិញ
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if u.username.upper() != 'ADMIN' %}
+                                    <form action="{{ url_for('user_delete', id=u.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបគណនី {{ u.username }} មែនទេ?');">
+                                        <button type="submit" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fca5a5;">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #94a3b8; padding: 24px;">មិនទាន់មានអ្នកប្រើប្រាស់ទេ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

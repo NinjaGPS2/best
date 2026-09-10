@@ -1,0 +1,58 @@
+/* Official EDC Invoice Print Stylesheet */
+@media print {
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 12pt;
+    }
+
+    .sidebar,
+    .top-nav,
+    .page-header,
+    .no-print,
+    .btn,
+    .flash-container,
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .main-wrapper {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    .page-content {
+        padding: 0 !important;
+    }
+
+    .invoice-sheet {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .tariff-breakdown-table th {
+        background: #e2e8f0 !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .khqr-box {
+        border: 1px solid #000 !important;
+    }
+
+    .khqr-tag {
+        background: #000 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    @page {
+        margin: 1.5cm;
+        size: A4 portrait;
+    }
+}

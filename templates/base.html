@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ប្រព័ន្ធគ្រប់គ្រងការប្រើប្រាស់អគ្គិសនី | EDC Billing{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}" media="print">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar no-print">
+            <div class="sidebar-header">
+                <!-- Transparent Logo -->
+                <div class="logo-badge-img">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="sidebar-app-logo">
+                </div>
+                <div class="sidebar-title">
+                    <h2>អគ្គិសនីកម្ពុជា</h2>
+                    <p>Electricity Billing</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li class="sidebar-item {% if request.endpoint == 'index' %}active{% endif %}">
+                    <a href="{{ url_for('index') }}" class="sidebar-link">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>ផ្ទាំងគ្រប់គ្រង (Dashboard)</span>
+                    </a>
+                </li>
+
+                <li class="menu-section">៤ ផ្នែកសំខាន់ៗនៃប្រព័ន្ធ</li>
+
+                <li class="sidebar-item {% if request.endpoint in ['customers_list', 'customer_detail'] %}active{% endif %}">
+                    <a href="{{ url_for('customers_list') }}" class="sidebar-link">
+                        <i class="fa-solid fa-users"></i>
+                        <span>១. អតិថិជន & នាឡិកាស្ទង់</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item {% if request.endpoint == 'readings_list' %}active{% endif %}">
+                    <a href="{{ url_for('readings_list') }}" class="sidebar-link">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span>២. កត់ត្រាការប្រើប្រាស់</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item {% if request.endpoint in ['invoices_list', 'invoice_detail'] %}active{% endif %}">
+                    <a href="{{ url_for('invoices_list') }}" class="sidebar-link">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        <span>៣. វិក្កយបត្រ (Invoices)</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item {% if request.endpoint == 'payments_list' %}active{% endif %}">
+                    <a href="{{ url_for('payments_list') }}" class="sidebar-link">
+                        <i class="fa-solid fa-money-check-dollar"></i>
+                        <span>៤. ការបង់ប្រាក់ (Payments)</span>
+                    </a>
+                </li>
+
+                <li class="menu-section">របាយការណ៍ & កំណត់រចនាសម្ព័ន្ធ</li>
+
+                <li class="sidebar-item {% if request.endpoint == 'reports_view' %}active{% endif %}">
+                    <a href="{{ url_for('reports_view') }}" class="sidebar-link">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>របាយការណ៍សង្ខេប</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item {% if request.endpoint == 'reports_disconnections' %}active{% endif %}">
+                    <a href="{{ url_for('reports_disconnections') }}" class="sidebar-link">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>បញ្ជីកាត់ផ្ដាច់ចរន្ត</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item {% if request.endpoint == 'tariffs_view' %}active{% endif %}">
+                    <a href="{{ url_for('tariffs_view') }}" class="sidebar-link">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>តារាងតម្លៃ (Tariffs)</span>
+                    </a>
+                </li>
+
+                {% if current_user and current_user.role == 'admin' %}
+                <li class="menu-section">រដ្ឋបាល & អនុម័តគណនី</li>
+                <li class="sidebar-item {% if request.endpoint == 'users_list' %}active{% endif %}">
+                    <a href="{{ url_for('users_list') }}" class="sidebar-link">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>អ្នកប្រើប្រាស់ (Users)</span>
+                        {% if pending_users_count > 0 %}
+                        <span class="badge" style="background: #f59e0b; color: #fff; font-size: 10px; margin-left: auto; padding: 2px 6px; border-radius: 10px;">
+                            {{ pending_users_count }} ថ្មី
+                        </span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-avatar" style="overflow: hidden; background: #0284c7; color: white;">
+                    {{ (current_user.full_name[:1] if current_user else 'U') }}
+                </div>
+                <div class="user-info" style="flex-grow: 1; min-width: 0;">
+                    <div class="name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ current_user.full_name if current_user else 'ភ្ញៀវ (Guest)' }}
+                    </div>
+                    <div class="role" style="font-size: 11px; color: #38bdf8;">
+                        <i class="fa-solid fa-circle" style="font-size: 8px; color: #10b981;"></i> 
+                        {{ 'Admin (អភិបាល)' if current_user and current_user.role == 'admin' else 'បុគ្គលិក (Staff)' }}
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" title="ចាកចេញ (Logout)" style="color: #ef4444; font-size: 16px; padding: 6px; text-decoration: none;">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Top Navbar -->
+            <header class="top-nav no-print">
+                <div class="nav-search">
+                    <i class="fa-solid fa-magnifying-glass" style="color: #94a3b8;"></i>
+                    <input type="text" placeholder="ស្វែងរកអតិថិជន លេខកុងទ័រ ឬវិក្កយបត្រ..." onkeydown="if(event.key==='Enter') window.location.href='/customers?q='+this.value">
+                </div>
+
+                <div class="nav-actions">
+                    <div class="live-time">
+                        <i class="fa-regular fa-clock" style="color: #0284c7;"></i>
+                        <span id="liveClock">កំពុងផ្ទុក...</span>
+                    </div>
+
+                    <a href="{{ url_for('readings_list') }}" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-plus"></i> កត់ត្រាលេខអាន
+                    </a>
+
+                    <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--card-border); padding-left: 14px;">
+                        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">
+                            {{ current_user.username if current_user else 'ADMIN' }}
+                        </span>
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fecaca; padding: 4px 8px;">
+                            <i class="fa-solid fa-power-off"></i>
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="page-content">
+                <!-- Flash Alerts -->
+                <div class="flash-container no-print">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="flash-message flash-{{ category }}">
+                                    <span>{{ message }}</span>
+                                    <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:16px;">&times;</button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

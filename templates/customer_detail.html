@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}ព័ត៌មានអតិថិជន: {{ customer.name }} | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('customers_list') }}" class="btn btn-outline btn-sm" style="margin-bottom: 8px;">
+            <i class="fa-solid fa-arrow-left"></i> ត្រឡប់ទៅបញ្ជីអតិថិជន
+        </a>
+        <div class="page-title">
+            <h1>{{ customer.name }} <span style="font-size: 16px; color: #0284c7;">({{ customer.code }})</span></h1>
+            <p><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> បង្គោលលេខ: <strong>{{ customer.pole_number }}</strong> | {{ customer.address }}</p>
+        </div>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button onclick="openModal('editCustomerModal')" class="btn btn-outline">
+            <i class="fa-solid fa-pen-to-square"></i> កែប្រែព័ត៌មាន
+        </button>
+        <button onclick="openModal('addMeterModal')" class="btn btn-primary">
+            <i class="fa-solid fa-gauge"></i> បន្ថែមកុងទ័រថ្មី
+        </button>
+    </div>
+</div>
+
+<!-- Balance & Profile Ribbon -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+    <div class="panel-card" style="margin-bottom: 0;">
+        <div class="panel-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+                <div>
+                    <span style="font-size: 12px; color: #64748b;">លេខទូរសព្ទ</span>
+                    <div style="font-weight: 700; font-size: 15px;">{{ customer.phone or 'មិនទាន់មាន' }}</div>
+                </div>
+                <div>
+                    <span style="font-size: 12px; color: #64748b;">ប្រភេទអតិថិជន</span>
+                    <div><span class="badge badge-{{ customer.customer_type }}">{{ customer.customer_type | khmer_type }}</span></div>
+                </div>
+                <div>
+                    <span style="font-size: 12px; color: #64748b;">កាលបរិច្ឆេទចុះឈ្មោះ</span>
+                    <div style="font-weight: 600; font-size: 14px;">{{ customer.created_at[:10] }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-card" style="margin-bottom: 0; background: {% if total_unpaid > 0 %}#fff7ed; border-color: #fdba74;{% else %}#f0fdf4; border-color: #86efac;{% endif %}">
+        <div class="panel-body">
+            <span style="font-size: 12px; color: #64748b;">បំណុលសរុបមិនទាន់ទូទាត់</span>
+            <div style="font-size: 22px; font-weight: 800; color: {% if total_unpaid > 0 %}#c2410c{% else %}#15803d{% endif %};">
+                {{ total_unpaid | khmer_currency }}
+            </div>
+            {% if total_unpaid > 0 %}
+                <div style="font-size: 11.5px; color: #9a3412;">⚠️ ត្រូវបូកបញ្ចូលក្នុងវិក្កយបត្រខែបន្ទាប់</div>
+            {% else %}
+                <div style="font-size: 11.5px; color: #166534;">✓ គ្មានបំណុលជំពាក់ឡើយ</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Meters Section -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-gauge-high" style="color: #0284c7;"></i> នាឡិកាស្ទង់របស់អតិថិជន (Meters)</h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>លេខកូដកុងទ័រ</th>
+                        <th>ប្រភេទកុងទ័រ</th>
+                        <th>កាលបរិច្ឆេទដំឡើង</th>
+                        <th>លេខចាប់ផ្ដើម (kWh)</th>
+                        <th>ស្ថានភាពបច្ចុប្បន្ន</th>
+                        <th>ប្តូរស្ថានភាព</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in meters %}
+                    <tr>
+                        <td><strong style="font-size: 14px; font-family: monospace;">{{ m.meter_number }}</strong></td>
+                        <td>
+                            <span class="badge {% if m.meter_type == 'smart' %}badge-smart{% else %}badge-residential{% endif %}">
+                                {{ m.meter_type | meter_type_kh }}
+                            </span>
+                        </td>
+                        <td>{{ m.install_date }}</td>
+                        <td>{{ m.initial_kwh }} kWh</td>
+                        <td>
+                            {% set m_class, m_label = m.status | status_badge %}
+                            <span class="badge {{ m_class }}">{{ m_label }}</span>
+                        </td>
+                        <td>
+                            <form action="{{ url_for('meter_toggle_status', id=m.id) }}" method="POST" style="display: flex; gap: 6px; align-items: center;">
+                                <input type="hidden" name="customer_id" value="{{ customer.id }}">
+                                <select name="status" class="form-select" style="width: 140px; padding: 4px 8px; font-size: 12px;" onchange="this.form.submit()">
+                                    <option value="active" {% if m.status == 'active' %}selected{% endif %}>សកម្ម (Active)</option>
+                                    <option value="suspended" {% if m.status == 'suspended' %}selected{% endif %}>ផ្អាកបណ្ដោះអាសន្ន</option>
+                                    <option value="disconnected" {% if m.status == 'disconnected' %}selected{% endif %}>កាត់ផ្ដាច់ (Cutoff)</option>
+                                </select>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #94a3b8; padding: 24px;">មិនទាន់មានកុងទ័រនៅឡើយទេ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Invoices & Readings Two Columns -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <!-- Invoices List -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-file-invoice-dollar" style="color: #0284c7;"></i> ប្រវត្តិវិក្កយបត្រ</h3>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>លេខវិក្កយបត្រ</th>
+                            <th>កាលបរិច្ឆេទ</th>
+                            <th>ទឹកប្រាក់</th>
+                            <th>ស្ថានភាព</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('invoice_detail', id=inv.id) }}" style="color: #0284c7; font-weight: 700; text-decoration: none;">
+                                    {{ inv.invoice_number }}
+                                </a>
+                            </td>
+                            <td style="font-size: 12px;">{{ inv.issue_date }}</td>
+                            <td><strong>{{ inv.total_amount | khmer_currency }}</strong></td>
+                            <td>
+                                {% set b_class, b_label = inv.payment_status | status_badge %}
+                                <span class="badge {{ b_class }}">{{ b_label }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('invoice_detail', id=inv.id) }}" class="btn btn-outline btn-sm">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">គ្មានវិក្កយបត្រទេ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Readings List -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-clock-rotate-left" style="color: #10b981;"></i> ប្រវត្តិកត់ត្រាលេខអាន</h3>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ថ្ងៃកត់ត្រា</th>
+                            <th>ចាស់ - ថ្មី</th>
+                            <th>សរុប (kWh)</th>
+                            <th>វិធីសាស្ត្រ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in readings %}
+                        <tr>
+                            <td style="font-size: 12px;">{{ r.reading_date }}</td>
+                            <td>{{ r.prev_value }} ➔ {{ r.curr_value }}</td>
+                            <td><strong style="color: #0284c7;">{{ r.total_kwh }} kWh</strong></td>
+                            <td>
+                                {% if r.input_method == 'smart_iot' %}
+                                    <span class="badge badge-smart"><i class="fa-solid fa-wifi"></i> IoT API</span>
+                                {% else %}
+                                    <span class="badge" style="background:#f1f5f9; color:#475569;"><i class="fa-solid fa-mobile-screen"></i> បុគ្គលិក</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">គ្មានទិន្នន័យលេខអានទេ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Customer -->
+<div class="modal-backdrop" id="editCustomerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-pen-to-square"></i> កែប្រែព័ត៌មានអតិថិជន</h3>
+            <button class="modal-close" onclick="closeModal('editCustomerModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('customer_update', id=customer.id) }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ឈ្មោះអតិថិជន *</label>
+                    <input type="text" name="name" class="form-control" value="{{ customer.name }}" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">លេខទូរសព្ទ</label>
+                        <input type="text" name="phone" class="form-control" value="{{ customer.phone }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">លេខបង្គោលភ្លើង *</label>
+                        <input type="text" name="pole_number" class="form-control" value="{{ customer.pole_number }}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ប្រភេទអតិថិជន</label>
+                    <select name="customer_type" class="form-select">
+                        <option value="residential" {% if customer.customer_type == 'residential' %}selected{% endif %}>លំនៅឋាន (Residential)</option>
+                        <option value="commercial" {% if customer.customer_type == 'commercial' %}selected{% endif %}>អាជីវកម្ម (Commercial)</option>
+                        <option value="industrial" {% if customer.customer_type == 'industrial' %}selected{% endif %}>ឧស្សាហកម្ម (Industrial)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">អាសយដ្ឋាន</label>
+                    <input type="text" name="address" class="form-control" value="{{ customer.address }}">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editCustomerModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">រក្សាទុកការកែប្រែ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Add Meter -->
+<div class="modal-backdrop" id="addMeterModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-gauge-high"></i> បន្ថែមនាឡិកាស្ទង់ឱ្យអតិថិជននេះ</h3>
+            <button class="modal-close" onclick="closeModal('addMeterModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('meter_create') }}" method="POST">
+            <input type="hidden" name="customer_id" value="{{ customer.id }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">លេខកូដកុងទ័រ (Serial No) *</label>
+                    <input type="text" name="meter_number" class="form-control" placeholder="MTR-2024-XXXX" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ប្រភេទកុងទ័រ</label>
+                        <select name="meter_type" class="form-select">
+                            <option value="digital">ឌីជីថល (Digital)</option>
+                            <option value="smart">Smart Meter (IoT វៃឆ្លាត)</option>
+                            <option value="mechanical">មេកានិច (Mechanical)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">កាលបរិច្ឆេទដំឡើង</label>
+                        <input type="date" name="install_date" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">កម្រិតគីឡូវ៉ាត់ម៉ោងចាប់ផ្ដើម (Initial kWh)</label>
+                    <input type="number" step="0.1" name="initial_kwh" class="form-control" value="0.0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addMeterModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">ដំឡើងកុងទ័រ</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}ប្រវត្តិការបង់ប្រាក់ | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-money-check-dollar" style="color: #10b981;"></i> ម៉ូឌុលទូទាត់ប្រាក់ (Payments Module)</h1>
+        <p>កត់ត្រាការទូទាត់ប្រាក់សុទ្ធ ឬទូទាត់ស្វ័យប្រវត្តតាមធនាគារ (Bakong / KHQR Integration)</p>
+    </div>
+    <a href="{{ url_for('invoices_list', status='unpaid') }}" class="btn btn-primary">
+        <i class="fa-solid fa-file-invoice"></i> មើលវិក្កយបត្រមិនទាន់បង់
+    </a>
+</div>
+
+<!-- Payments Table -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-receipt"></i> ប្រវត្តិបង្កាន់ដៃទទួលប្រាក់ (Receipts) - ({{ payments|length }})</h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>លេខបង្កាន់ដៃ (Receipt No)</th>
+                        <th>លេខវិក្កយបត្រ</th>
+                        <th>អតិថិជន</th>
+                        <th>ចំនួនទឹកប្រាក់បង់</th>
+                        <th>វិធីសាស្ត្រទូទាត់</th>
+                        <th>កាលបរិច្ឆេទ & ម៉ោង</th>
+                        <th>កំណត់សម្គាល់</th>
+                        <th style="text-align: right;">វិក្កយបត្រ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td><strong style="color: #10b981;">{{ p.receipt_number }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('invoice_detail', id=p.invoice_id) }}" style="font-weight: 600; color: #0284c7; text-decoration: none;">
+                                {{ p.invoice_number }}
+                            </a>
+                        </td>
+                        <td>
+                            <div><strong>{{ p.customer_name }}</strong></div>
+                            <div style="font-size: 11px; color: #64748b;">{{ p.customer_code }}</div>
+                        </td>
+                        <td>
+                            <strong style="font-size: 15px; color: #166534;">{{ p.paid_amount | khmer_currency }}</strong>
+                        </td>
+                        <td>
+                            {% if p.payment_method == 'khqr_bakong' %}
+                                <span class="badge badge-smart" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+                                    <i class="fa-solid fa-qrcode"></i> Bakong KHQR
+                                </span>
+                            {% else %}
+                                <span class="badge" style="background: #f1f5f9; color: #334155;">
+                                    <i class="fa-solid fa-money-bill-1-wave"></i> សាច់ប្រាក់ (Cash)
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size: 12px; color: #475569;">{{ p.paid_at }}</td>
+                        <td style="font-size: 12px; color: #64748b;">{{ p.notes or '-' }}</td>
+                        <td style="text-align: right;">
+                            <a href="{{ url_for('invoice_detail', id=p.invoice_id) }}" class="btn btn-outline btn-sm">
+                                <i class="fa-solid fa-eye"></i> មើល
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: #94a3b8; padding: 32px;">
+                            មិនទាន់មានប្រវត្តិបង់ប្រាក់នៅឡើយទេ
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

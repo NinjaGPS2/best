@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}ម៉ូឌុលកត់ត្រាការប្រើប្រាស់អគ្គិសនី | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-gauge-high" style="color: #0284c7;"></i> ម៉ូឌុលកត់ត្រាការប្រើប្រាស់ (Meter Reading Module)</h1>
+        <p>កត់ត្រាលេខអានចាស់ និងថ្មី រូបមន្ត: <strong>ថាមពល (kWh) = លេខថ្មី - លេខចាស់</strong></p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <form action="{{ url_for('api_smart_meter_sync') }}" method="POST">
+            <button type="submit" class="btn btn-outline" style="border-color: #10b981; color: #047857;">
+                <i class="fa-solid fa-tower-broadcast"></i> ទាញយកពី Smart Meter (IoT/API)
+            </button>
+        </form>
+        <button onclick="openModal('addReadingModal')" class="btn btn-primary">
+            <i class="fa-solid fa-camera"></i> + កត់ត្រាលេខអានថ្មី
+        </button>
+    </div>
+</div>
+
+<!-- Quick Info Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 24px;">
+    <div class="panel-card" style="margin-bottom: 0; background: linear-gradient(135deg, #0284c7, #0ea5e9); color: white;">
+        <div class="panel-body">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 13px; opacity: 0.9;">វិធីសាស្ត្របញ្ចូលទិន្នន័យ (Input Methods)</div>
+                    <div style="font-size: 17px; font-weight: 700; margin-top: 4px;">
+                        <i class="fa-solid fa-mobile-screen"></i> Mobile App & <i class="fa-solid fa-wifi"></i> IoT API
+                    </div>
+                </div>
+                <i class="fa-solid fa-bolt" style="font-size: 32px; opacity: 0.4;"></i>
+            </div>
+            <div style="font-size: 12px; margin-top: 10px; opacity: 0.85;">
+                បុគ្គលិកអាចថតរូបកុងទ័រទុកជាភស្តុតាង ឬទាញយកស្វ័យប្រវត្តពី Smart Meter
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-card" style="margin-bottom: 0;">
+        <div class="panel-body">
+            <div style="font-size: 13px; color: #64748b;">រូបមន្តគណនាថាមពល (Formula)</div>
+            <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 4px;">
+                $$\text{kWh} = \text{Current Reading} - \text{Previous Reading}$$
+            </div>
+            <div style="font-size: 12px; color: #10b981; margin-top: 8px;">
+                ✓ ត្រួតពិនិត្យភាពត្រឹមត្រូវដោយស្វ័យប្រវត្តភ្លាមៗ
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Readings List Table -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-list-check"></i> ប្រវត្តិកត់ត្រាលេខអានទាំងអស់ ({{ readings|length }})</h3>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>កាលបរិច្ឆេទ</th>
+                        <th>អតិថិជន</th>
+                        <th>លេខកុងទ័រ</th>
+                        <th>ប្រភេទ</th>
+                        <th>លេខអានចាស់</th>
+                        <th>លេខអានថ្មី</th>
+                        <th>ថាមពលប្រើប្រាស់ (kWh)</th>
+                        <th>ភស្តុតាង (រូបថត)</th>
+                        <th>ប្រភពទិន្នន័យ</th>
+                        <th style="text-align: right;">វិក្កយបត្រ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in readings %}
+                    <tr>
+                        <td><strong>{{ r.reading_date }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('customer_detail', id=r.customer_id) }}" style="color: #0284c7; text-decoration: none; font-weight: 600;">
+                                {{ r.customer_name }}
+                            </a>
+                            <div style="font-size: 11px; color: #64748b;">{{ r.customer_code }}</div>
+                        </td>
+                        <td><code>{{ r.meter_number }}</code></td>
+                        <td>
+                            <span class="badge {% if r.meter_type == 'smart' %}badge-smart{% else %}badge-residential{% endif %}">
+                                {{ r.meter_type | meter_type_kh }}
+                            </span>
+                        </td>
+                        <td style="color: #64748b;">{{ r.prev_value }}</td>
+                        <td><strong>{{ r.curr_value }}</strong></td>
+                        <td>
+                            <span style="font-size: 14px; font-weight: 800; color: #0284c7;">
+                                {{ r.total_kwh }} kWh
+                            </span>
+                        </td>
+                        <td>
+                            {% if r.photo_path %}
+                                <a href="{{ url_for('static', filename='uploads/' + r.photo_path) }}" target="_blank" class="btn btn-outline btn-sm" style="padding: 3px 8px;">
+                                    <i class="fa-solid fa-image" style="color: #0284c7;"></i> រូបថត
+                                </a>
+                            {% else %}
+                                <span style="color: #94a3b8; font-size: 11px;">គ្មានរូប</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.input_method == 'smart_iot' %}
+                                <span class="badge badge-smart"><i class="fa-solid fa-wifi"></i> Smart IoT API</span>
+                            {% else %}
+                                <span class="badge" style="background:#f1f5f9; color:#334155;"><i class="fa-solid fa-user-pen"></i> {{ r.reader_id }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            {% if r.invoice_id %}
+                                <a href="{{ url_for('invoice_detail', id=r.invoice_id) }}" class="btn btn-outline btn-sm">
+                                    <i class="fa-solid fa-file-invoice"></i> មើលវិក្កយបត្រ
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('invoice_generate', reading_id=r.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fa-solid fa-file-circle-plus"></i> ចេញវិក្កយបត្រ
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: #94a3b8; padding: 32px;">មិនទាន់មានទិន្នន័យលេខអានទេ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Meter Reading -->
+<div class="modal-backdrop" id="addReadingModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-calculator" style="color: #0284c7;"></i> កត់ត្រាលេខអានកុងទ័រ (Staff Meter Entry)</h3>
+            <button class="modal-close" onclick="closeModal('addReadingModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('reading_create') }}" method="POST" enctype="multipart/form-data">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ជ្រើសរើសនាឡិកាស្ទង់ (Select Active Meter) *</label>
+                    <select name="meter_id" id="meterSelect" class="form-select" required>
+                        <option value="">-- ជ្រើសរើសកុងទ័រ --</option>
+                        {% for am in active_meters %}
+                        <option value="{{ am.id }}">
+                            {{ am.meter_number }} - {{ am.customer_name }} ({{ am.code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កាលបរិច្ឆេទកត់ត្រា</label>
+                    <input type="date" name="reading_date" class="form-control" value="{{ None }}">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">លេខអានចាស់ (Previous Reading)</label>
+                        <input type="number" step="0.1" name="prev_value" id="prevValueInput" class="form-control" value="0.0" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">លេខអានថ្មី (Current Reading) *</label>
+                        <input type="number" step="0.1" name="curr_value" id="currValueInput" class="form-control" placeholder="វាយលេខលើកុងទ័រ..." required>
+                    </div>
+                </div>
+
+                <!-- Instant Live Calculation Box -->
+                <div style="background: #f0fdf4; border: 1px dashed #10b981; border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
+                    <div style="font-size: 12px; color: #166534; font-weight: 600;">ថាមពលប្រើប្រាស់គណនាភ្លាមៗ:</div>
+                    <div id="kwhDisplay" style="font-size: 18px; margin-top: 4px; color: #0284c7; font-weight: 700;">
+                        0.0 kWh (សូមបញ្ចូលលេខអានថ្មី)
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ថតរូបកុងទ័រទុកជាភស្តុតាង (Meter Photo Proof)</label>
+                    <input type="file" name="meter_photo" id="meterPhotoInput" class="form-control" accept="image/*">
+                    <div style="margin-top: 8px;">
+                        <img id="photoPreview" src="" alt="Preview" style="display: none; max-width: 100%; height: 140px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1;">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">កូដបុគ្គលិកចុះកត់ត្រា</label>
+                        <input type="text" name="reader_id" class="form-control" value="Staff-01">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; margin-top: 24px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                            <input type="checkbox" name="auto_invoice" value="1" checked style="width: 18px; height: 18px;">
+                            ចេញវិក្កយបត្រស្វ័យប្រវត្តភ្លាមៗ
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addReadingModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">រក្សាទុកការកត់ត្រា</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

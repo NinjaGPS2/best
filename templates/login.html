@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ចូលប្រើប្រាស់ប្រព័ន្ធ | Login - EDC Electricity Billing</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <!-- Transparent Logo -->
+                <div class="auth-logo-container">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="EDC Logo" class="auth-logo">
+                </div>
+                <h2>ប្រព័ន្ធគ្រប់គ្រងការប្រើប្រាស់អគ្គិសនី</h2>
+                <p>Electricity Billing & Management System</p>
+            </div>
+
+            <!-- Flash Alerts -->
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="flash-message flash-{{ category }}">
+                                <span>{{ message }}</span>
+                                <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:16px;">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <form action="{{ url_for('login', next=request.args.get('next')) }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-user"></i> ឈ្មោះគណនី (Username)</label>
+                    <input type="text" name="username" class="form-control" value="{{ username or '' }}" placeholder="វាយឈ្មោះគណនី..." required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-lock"></i> ពាក្យសម្ងាត់ (Password)</label>
+                    <div class="password-input-group">
+                        <input type="password" name="password" id="loginPassword" class="form-control" placeholder="វាយពាក្យសម្ងាត់..." required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('loginPassword', this)" title="មើលពាក្យសម្ងាត់">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; padding: 12px; font-size: 15px; margin-top: 10px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> ចូលប្រើប្រាស់ (Login)
+                </button>
+            </form>
+
+            <div class="auth-footer-links">
+                <div>មិនទាន់មានគណនី? <a href="{{ url_for('register') }}" style="color: #0284c7; font-weight: 700; text-decoration: none;">ចុះឈ្មោះនៅទីនេះ</a></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
+</body>
+</html>

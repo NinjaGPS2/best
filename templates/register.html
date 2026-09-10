@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ចុះឈ្មោះគណនីថ្មី | Register - EDC Electricity Billing</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+    <div class="auth-wrapper">
+        <div class="auth-card" style="max-width: 480px;">
+            <div class="auth-header">
+                <!-- Transparent Logo -->
+                <div class="auth-logo-container">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="EDC Logo" class="auth-logo">
+                </div>
+                <h2>ចុះឈ្មោះគណនីថ្មី</h2>
+                <p>Register New Staff Account</p>
+            </div>
+
+            <!-- Flash Alerts -->
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="flash-message flash-{{ category }}">
+                                <span>{{ message }}</span>
+                                <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:16px;">&times;</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Notice Banner -->
+            <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 6px; font-size: 12.5px; color: #92400e; margin-bottom: 18px;">
+                <i class="fa-solid fa-circle-exclamation"></i> <strong>ចំណាំសំខាន់:</strong> រាល់ការចុះឈ្មោះថ្មីទាំងអស់ តម្រូវឱ្យមានការអនុម័តពី <strong>Admin</strong> ជាមុនសិន ទើបអាចចូលប្រើប្រាស់ (Login) បាន។
+            </div>
+
+            <form action="{{ url_for('register') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-id-card"></i> ឈ្មោះពេញ (Full Name) *</label>
+                    <input type="text" name="full_name" class="form-control" value="{{ full_name or '' }}" placeholder="ឧ. កែវ សំណាង" required autofocus>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-phone"></i> លេខទូរសព្ទ</label>
+                        <input type="text" name="phone" class="form-control" value="{{ phone or '' }}" placeholder="012 xxx xxx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-user-tag"></i> ឈ្មោះគណនី (Username) *</label>
+                        <input type="text" name="username" class="form-control" value="{{ username or '' }}" placeholder="ឧ. samnang01" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-lock"></i> ពាក្យសម្ងាត់ (Password) *</label>
+                    <div class="password-input-group">
+                        <input type="password" name="password" id="regPassword" class="form-control" placeholder="យ៉ាងហោចណាស់ ៤ តួអក្សរ..." required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('regPassword', this)" title="មើលពាក្យសម្ងាត់">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa-solid fa-shield-check"></i> បញ្ជាក់ពាក្យសម្ងាត់ (Confirm Password) *</label>
+                    <div class="password-input-group">
+                        <input type="password" name="confirm_password" id="regConfirmPassword" class="form-control" placeholder="វាយពាក្យសម្ងាត់ម្តងទៀត..." required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('regConfirmPassword', this)" title="មើលពាក្យសម្ងាត់">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="width: 100%; padding: 12px; font-size: 15px; margin-top: 8px;">
+                    <i class="fa-solid fa-user-plus"></i> ចុះឈ្មោះ (Sign Up)
+                </button>
+            </form>
+
+            <div class="auth-footer-links">
+                <div>មានគណនីរួចហើយ? <a href="{{ url_for('login') }}" style="color: #0284c7; font-weight: 700; text-decoration: none;">ចូលប្រើប្រាស់នៅទីនេះ</a></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
+</body>
+</html>

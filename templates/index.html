@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}ផ្ទាំងគ្រប់គ្រងទូទៅ | EDC Electricity Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-chart-line" style="color: #0284c7;"></i> ផ្ទាំងគ្រប់គ្រងប្រព័ន្ធអគ្គិសនី (Dashboard)</h1>
+        <p>ទិដ្ឋភាពទូទៅនៃចំណូល ការប្រើប្រាស់អគ្គិសនី និងស្ថានភាពវិក្កយបត្រ</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <form action="{{ url_for('api_smart_meter_sync') }}" method="POST">
+            <button type="submit" class="btn btn-outline">
+                <i class="fa-solid fa-tower-broadcast" style="color: #10b981;"></i> ទាញយកពី Smart Meter (IoT)
+            </button>
+        </form>
+        <button onclick="openModal('addCustomerModal')" class="btn btn-primary">
+            <i class="fa-solid fa-user-plus"></i> បន្ថែមអតិថិជនថ្មី
+        </button>
+    </div>
+</div>
+
+<!-- KPI Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">ចំណូលប្រមូលបានសរុប</div>
+            <div class="value" style="color: #10b981;">{{ total_revenue | khmer_currency }}</div>
+        </div>
+        <div class="stat-icon green">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">ថាមពលលក់ចេញសរុប</div>
+            <div class="value">{{ "{:,.1f}".format(total_kwh) }} <span style="font-size: 15px; font-weight: 500;">kWh</span></div>
+        </div>
+        <div class="stat-icon blue">
+            <i class="fa-solid fa-bolt"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">វិក្កយបត្រមិនទាន់បង់</div>
+            <div class="value" style="color: #f59e0b;">{{ unpaid_invoices_count }} <span style="font-size: 14px;">ច្បាប់</span></div>
+        </div>
+        <div class="stat-icon amber">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">វិក្កយបត្រលើសកាលកំណត់</div>
+            <div class="value" style="color: #ef4444;">{{ overdue_invoices_count }} <span style="font-size: 14px;">ច្បាប់</span></div>
+        </div>
+        <div class="stat-icon red">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 28px;">
+    <!-- Revenue Trend Chart -->
+    <div class="panel-card" style="margin-bottom: 0;">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-chart-column" style="color: #0284c7;"></i> ចំណូលប្រចាំខែ (Monthly Revenue)</h3>
+        </div>
+        <div class="panel-body">
+            <div style="height: 270px;">
+                <canvas id="revenueChart" 
+                    data-labels='{{ chart_rev_labels | tojson }}'
+                    data-values='{{ chart_rev_data | tojson }}'>
+                </canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consumption by Customer Type Chart -->
+    <div class="panel-card" style="margin-bottom: 0;">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-chart-pie" style="color: #8b5cf6;"></i> បរិមាណភ្លើងតាមប្រភេទ</h3>
+        </div>
+        <div class="panel-body">
+            <div style="height: 270px;">
+                <canvas id="typeConsumptionChart"
+                    data-res="{{ consumption_by_type.residential }}"
+                    data-com="{{ consumption_by_type.commercial }}"
+                    data-ind="{{ consumption_by_type.industrial }}">
+                </canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Invoices & Readings Grid -->
+<div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px;">
+    <!-- Recent Invoices Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-file-invoice" style="color: #0284c7;"></i> វិក្កយបត្រចេញថ្មីៗ (Recent Invoices)</h3>
+            <a href="{{ url_for('invoices_list') }}" class="btn btn-outline btn-sm">មើលទាំងអស់</a>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>លេខវិក្កយបត្រ</th>
+                            <th>អតិថិជន</th>
+                            <th>ទឹកប្រាក់សរុប</th>
+                            <th>ស្ថានភាព</th>
+                            <th>សកម្មភាព</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in recent_invoices %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('invoice_detail', id=inv.id) }}" style="color: #0284c7; font-weight: 700; text-decoration: none;">
+                                    {{ inv.invoice_number }}
+                                </a>
+                            </td>
+                            <td>
+                                <div><strong>{{ inv.customer_name }}</strong></div>
+                                <div style="font-size: 11px; color: #64748b;">{{ inv.customer_code }}</div>
+                            </td>
+                            <td><strong>{{ inv.total_amount | khmer_currency }}</strong></td>
+                            <td>
+                                {% set badge_class, badge_label = inv.payment_status | status_badge %}
+                                <span class="badge {{ badge_class }}">{{ badge_label }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('invoice_detail', id=inv.id) }}" class="btn btn-outline btn-sm">
+                                    <i class="fa-solid fa-eye"></i> មើល
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 24px;">មិនទាន់មានវិក្កយបត្រនៅឡើយទេ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Readings Panel -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-clock-rotate-left" style="color: #10b981;"></i> លេខអានចុងក្រោយ</h3>
+            <a href="{{ url_for('readings_list') }}" class="btn btn-outline btn-sm">មើលទាំងអស់</a>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>កុងទ័រ</th>
+                            <th>អតិថិជន</th>
+                            <th>ប្រើប្រាស់</th>
+                            <th>កាលបរិច្ឆេទ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rd in recent_readings %}
+                        <tr>
+                            <td><code>{{ rd.meter_number }}</code></td>
+                            <td>{{ rd.customer_name }}</td>
+                            <td><strong style="color: #0284c7;">{{ rd.total_kwh }} kWh</strong></td>
+                            <td style="font-size: 12px; color: #64748b;">{{ rd.reading_date }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #94a3b8; padding: 24px;">មិនទាន់មានលេខអានទេ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Quick Add Customer -->
+<div class="modal-backdrop" id="addCustomerModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-user-plus" style="color: #0284c7;"></i> បន្ថែមអតិថិជន និងនាឡិកាស្ទង់ថ្មី</h3>
+            <button class="modal-close" onclick="closeModal('addCustomerModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('customer_create') }}" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ឈ្មោះអតិថិជន *</label>
+                    <input type="text" name="name" class="form-control" placeholder="ឧ. សុខ ចាន់ដារា" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">លេខទូរសព្ទ</label>
+                        <input type="text" name="phone" class="form-control" placeholder="012 xxx xxx">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">លេខបង្គោលភ្លើង *</label>
+                        <input type="text" name="pole_number" class="form-control" placeholder="ឧ. P-088/TK" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">ប្រភេទអតិថិជន *</label>
+                        <select name="customer_type" class="form-select">
+                            <option value="residential">លំនៅឋាន (Residential)</option>
+                            <option value="commercial">អាជីវកម្ម (Commercial)</option>
+                            <option value="industrial">ឧស្សាហកម្ម (Industrial)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">អាសយដ្ឋាន</label>
+                        <input type="text" name="address" class="form-control" placeholder="ផ្ទះលេខ, ផ្លូវ, សង្កាត់...">
+                    </div>
+                </div>
+
+                <hr style="margin: 18px 0; border: none; border-top: 1px dashed #cbd5e1;">
+                <h4 style="font-size: 14px; margin-bottom: 12px; color: #0284c7;">
+                    <i class="fa-solid fa-gauge-high"></i> ព័ត៌មាននាឡិកាស្ទង់ (Meter Information)
+                </h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">លេខកូដកុងទ័រ (Serial No)</label>
+                        <input type="text" name="meter_number" class="form-control" placeholder="ឧ. MTR-2024-9001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ប្រភេទកុងទ័រ</label>
+                        <select name="meter_type" class="form-select">
+                            <option value="digital">ឌីជីថល (Digital)</option>
+                            <option value="smart">Smart Meter (IoT)</option>
+                            <option value="mechanical">មេកានិច (Mechanical)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">កម្រិតគីឡូវ៉ាត់ម៉ោងចាប់ផ្ដើម (Initial kWh)</label>
+                    <input type="number" step="0.1" name="initial_kwh" class="form-control" value="0.0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addCustomerModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-primary">រក្សាទុក</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}វិក្កយបត្រ {{ invoice.invoice_number }} | អគ្គិសនីកម្ពុជា{% endblock %}
+
+{% block content %}
+<!-- Action Header (Hidden on Print) -->
+<div class="page-header no-print">
+    <div>
+        <a href="{{ url_for('invoices_list') }}" class="btn btn-outline btn-sm" style="margin-bottom: 8px;">
+            <i class="fa-solid fa-arrow-left"></i> ត្រឡប់ទៅបញ្ជីវិក្កយបត្រ
+        </a>
+        <div class="page-title">
+            <h1>វិក្កយបត្រអគ្គិសនី: {{ invoice.invoice_number }}</h1>
+        </div>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button onclick="window.print()" class="btn btn-outline">
+            <i class="fa-solid fa-print"></i> បោះពុម្ព (Print A4)
+        </button>
+
+        <form action="{{ url_for('invoice_telegram_notify', id=invoice.id) }}" method="POST" style="margin: 0;">
+            <button type="submit" class="btn btn-outline" style="border-color: #0284c7; color: #0284c7;">
+                <i class="fa-brands fa-telegram"></i> ផ្ញើតាម Telegram / SMS
+            </button>
+        </form>
+
+        {% if invoice.payment_status != 'paid' %}
+        <button onclick="openModal('paymentModal')" class="btn btn-success">
+            <i class="fa-solid fa-circle-check"></i> កត់ត្រាការបង់ប្រាក់
+        </button>
+        {% else %}
+        <span class="badge badge-paid" style="font-size: 14px; padding: 8px 16px;">
+            <i class="fa-solid fa-circle-check"></i> បានទូទាត់រួចរាល់
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Official EDC Invoice Paper Sheet -->
+<div class="invoice-sheet" id="printableInvoice">
+    <!-- EDC Top Header -->
+    <div class="invoice-header-grid">
+        <div class="edc-logo-box">
+            <i class="fa-solid fa-bolt-lightning" style="font-size: 28px; margin-bottom: 2px;"></i>
+            <div class="bold">EDC</div>
+            <div class="sub">អគ្គិសនីកម្ពុជា</div>
+        </div>
+
+        <div class="edc-titles">
+            <h2>អគ្គិសនីកម្ពុជា (ELECTRICITÉ DU CAMBODGE)</h2>
+            <h4>វិក្កយបត្រថ្លៃប្រើប្រាស់អគ្គិសនី (ELECTRICITY CONSUMPTION INVOICE)</h4>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">
+                អាសយដ្ឋាន: អាគារលេខ១៩ ផ្លូវលេខ១០២ សង្កាត់វត្តភ្នំ ខណ្ឌដូនពេញ រាជធានីភ្នំពេញ | Hotline: 1298
+            </div>
+        </div>
+
+        <div class="invoice-meta-box">
+            <div class="inv-code-tag">{{ invoice.invoice_number }}</div>
+            <div style="margin-top: 6px;">
+                {% set b_class, b_label = invoice.payment_status | status_badge %}
+                <span class="badge {{ b_class }}">{{ b_label }}</span>
+            </div>
+            <div style="margin-top: 6px; font-size: 12px; color: #475569;">
+                ថ្ងៃចេញ: <strong>{{ invoice.issue_date }}</strong>
+            </div>
+            <div style="font-size: 12px; color: #dc2626;">
+                ផុតកំណត់: <strong>{{ invoice.due_date }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer & Meter Details -->
+    <div class="invoice-client-card">
+        <div>
+            <div style="font-weight: 700; font-size: 15px; color: #0f172a; margin-bottom: 6px;">
+                ព័ត៌មានអតិថិជន (Customer Information)
+            </div>
+            <div><strong>ឈ្មោះ:</strong> {{ invoice.customer_name }}</div>
+            <div><strong>កូដអតិថិជន:</strong> {{ invoice.customer_code }}</div>
+            <div><strong>ប្រភេទ:</strong> {{ invoice.customer_type | khmer_type }}</div>
+            <div><strong>លេខទូរសព្ទ:</strong> {{ invoice.customer_phone or 'មិនទាន់មាន' }}</div>
+            <div><strong>អាសយដ្ឋាន:</strong> {{ invoice.customer_address }}</div>
+        </div>
+
+        <div>
+            <div style="font-weight: 700; font-size: 15px; color: #0f172a; margin-bottom: 6px;">
+                ព័ត៌មាននាឡិកាស្ទង់ (Meter & Reading)
+            </div>
+            <div><strong>លេខកុងទ័រ:</strong> <code>{{ invoice.meter_number }}</code> ({{ invoice.meter_type | meter_type_kh }})</div>
+            <div><strong>បង្គោលភ្លើងលេខ:</strong> <span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: 700;">{{ invoice.pole_number }}</span></div>
+            <div><strong>ថ្ងៃកត់ត្រាលេខអាន:</strong> {{ invoice.reading_date }}</div>
+            <div><strong>លេខអានចាស់:</strong> {{ invoice.prev_value }} kWh</div>
+            <div><strong>លេខអានថ្មី:</strong> {{ invoice.curr_value }} kWh</div>
+            <div style="margin-top: 4px; color: #0284c7; font-weight: 800; font-size: 14.5px;">
+                ថាមពលប្រើប្រាស់សរុប = {{ invoice.total_kwh }} kWh
+            </div>
+        </div>
+    </div>
+
+    <!-- Tiered Tariff Breakdown Table -->
+    <div style="margin-bottom: 16px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #0f172a;">
+            តារាងលម្អិតការគណនាថ្លៃតាមកម្រិត (Tiered Tariffs Breakdown)
+        </h4>
+        <table class="tariff-breakdown-table">
+            <thead>
+                <tr>
+                    <th>កម្រិតការប្រើប្រាស់ (Tariff Tiers)</th>
+                    <th>បរិមាណ (kWh)</th>
+                    <th>តម្លៃឯកតា (រៀល/kWh)</th>
+                    <th style="text-align: right;">ទឹកប្រាក់ (រៀល - KHR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>កម្រិត ១ (0 - 50 kWh)</td>
+                    <td>{{ invoice.tier1_kwh }} kWh</td>
+                    <td>380 ៛</td>
+                    <td style="text-align: right;"><strong>{{ invoice.tier1_amount | khmer_currency }}</strong></td>
+                </tr>
+                <tr>
+                    <td>កម្រិត ២ (51 - 100 kWh)</td>
+                    <td>{{ invoice.tier2_kwh }} kWh</td>
+                    <td>480 ៛</td>
+                    <td style="text-align: right;"><strong>{{ invoice.tier2_amount | khmer_currency }}</strong></td>
+                </tr>
+                <tr>
+                    <td>កម្រិត ៣ (> 100 kWh)</td>
+                    <td>{{ invoice.tier3_kwh }} kWh</td>
+                    <td>610 ៛</td>
+                    <td style="text-align: right;"><strong>{{ invoice.tier3_amount | khmer_currency }}</strong></td>
+                </tr>
+                <tr style="background: #f8fafc; font-weight: 700;">
+                    <td colspan="3">ថ្លៃប្រើប្រាស់អគ្គិសនីសរុប (Total Energy Cost)</td>
+                    <td style="text-align: right; color: #0284c7;">{{ invoice.energy_amount | khmer_currency }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Invoice Bottom Summary & KHQR Code -->
+    <div class="invoice-total-summary">
+        <!-- KHQR Bakong Code Box -->
+        <div class="khqr-box">
+            <div class="khqr-tag">KHQR • BAKONG</div>
+            <div>
+                <img src="{{ khqr_qr_img }}" alt="KHQR Payment">
+            </div>
+            <div style="font-size: 13px; font-weight: 700; margin-top: 8px; color: #0f172a;">
+                ស្កេនទូទាត់តាមកម្មវិធីធនាគារណាក៏បាន
+            </div>
+            <div style="font-size: 11px; color: #64748b;">
+                Bakong, ABA, Wing, ACLEDA, Canadia, TrueMoney...
+            </div>
+        </div>
+
+        <!-- Grand Total Breakdown -->
+        <div class="grand-total-rows">
+            <div class="row-item">
+                <span>ថ្លៃថាមពលអគ្គិសនី:</span>
+                <strong>{{ invoice.energy_amount | khmer_currency }}</strong>
+            </div>
+            <div class="row-item">
+                <span>ថ្លៃថែទាំនាឡិកាស្ទង់:</span>
+                <span>{{ invoice.maintenance_fee | khmer_currency }}</span>
+            </div>
+            <div class="row-item">
+                <span>ពន្ធអាករ (VAT):</span>
+                <span>{{ invoice.tax | khmer_currency }}</span>
+            </div>
+            <div class="row-item" style="border-top: 1px dashed #cbd5e1; padding-top: 6px;">
+                <span>បំណុលចាស់ (មិនទាន់ទូទាត់):</span>
+                <span style="color: {% if invoice.prev_unpaid > 0 %}#dc2626; font-weight: 700;{% else %}#64748b;{% endif %}">
+                    {{ invoice.prev_unpaid | khmer_currency }}
+                </span>
+            </div>
+            <div class="row-item total-final">
+                <span>សរុបត្រូវបង់:</span>
+                <span>{{ invoice.total_amount | khmer_currency }}</span>
+            </div>
+
+            {% if payment %}
+            <div style="margin-top: 14px; padding: 10px; background: #dcfce7; border-radius: 6px; border: 1px solid #86efac; font-size: 12px; color: #166534;">
+                <div><i class="fa-solid fa-circle-check"></i> <strong>បានទូទាត់រួចរាល់</strong></div>
+                <div>លេខបង្កាន់ដៃ: <strong>{{ payment.receipt_number }}</strong></div>
+                <div>កាលបរិច្ឆេទ: {{ payment.paid_at }}</div>
+                <div>វិធីសាស្ត្រ: {{ payment.payment_method }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Official Stamp & Signature Area -->
+    <div style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #cbd5e1; font-size: 12px; text-align: center;">
+        <div>
+            <div>ហត្ថលេខាអតិថិជន</div>
+            <div style="height: 50px;"></div>
+            <div style="color: #94a3b8;">...................................</div>
+        </div>
+        <div>
+            <div>អ្នកគិតលុយ / បុគ្គលិកចេញវិក្កយបត្រ</div>
+            <div style="height: 50px;"></div>
+            <div style="font-weight: 700; color: #0284c7;">EDC Billing System</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Record Payment -->
+<div class="modal-backdrop" id="paymentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-money-check-dollar" style="color: #10b981;"></i> កត់ត្រាការបង់ប្រាក់ (Payment Confirmation)</h3>
+            <button class="modal-close" onclick="closeModal('paymentModal')">&times;</button>
+        </div>
+        <form action="{{ url_for('payment_create', invoice_id=invoice.id) }}" method="POST">
+            <div class="modal-body">
+                <div style="background: #f8fafc; border-radius: 8px; padding: 14px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 13px; color: #64748b;">វិក្កយបត្រលេខ: <strong>{{ invoice.invoice_number }}</strong></div>
+                    <div style="font-size: 13px; color: #64748b;">អតិថិជន: <strong>{{ invoice.customer_name }}</strong></div>
+                    <div style="font-size: 20px; font-weight: 800; color: #10b981; margin-top: 6px;">
+                        ទឹកប្រាក់ត្រូវបង់: {{ invoice.total_amount | khmer_currency }}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ចំនួនទឹកប្រាក់បង់ជាក់ស្តែង (Amount in KHR) *</label>
+                    <input type="number" step="100" name="paid_amount" class="form-control" value="{{ invoice.total_amount }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">វិធីសាស្ត្រទូទាត់ប្រាក់ *</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="khqr_bakong">ស្កេនទូទាត់តាម KHQR (Bakong / Mobile Banking)</option>
+                        <option value="cash">បង់ប្រាក់សុទ្ធ (Cash Payment)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">កំណត់សម្គាល់ (Notes)</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="ឧ. អតិថិជនបានស្កេនបង់តាម ABA..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('paymentModal')">បោះបង់</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-check"></i> បញ្ជាក់ការទទួលប្រាក់
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

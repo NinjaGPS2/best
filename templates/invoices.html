@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}គ្រប់គ្រងវិក្កយបត្រ (Invoices & Billing) | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-file-invoice-dollar" style="color: #0284c7;"></i> ម៉ូឌុលគណនាថ្លៃ និងវិក្កយបត្រ (Invoicing Module)</h1>
+        <p>គ្រប់គ្រងការចេញវិក្កយបត្រ តាមដានស្ថានភាពបង់ប្រាក់ និងបង្កើតកូដ KHQR</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('tariffs_view') }}" class="btn btn-outline">
+            <i class="fa-solid fa-sliders"></i> តារាងតម្លៃបង់តាមកម្រិត (Tariffs)
+        </a>
+        <a href="{{ url_for('readings_list') }}" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i> ចេញវិក្កយបត្រពីលេខអាន
+        </a>
+    </div>
+</div>
+
+<!-- Financial Summary Ribbon -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <div class="stat-card" style="border-left: 4px solid #10b981;">
+        <div class="stat-info">
+            <div class="label">បង់រួចរាល់ ({{ paid_stat[0] }} ច្បាប់)</div>
+            <div class="value" style="color: #10b981; font-size: 20px;">{{ paid_stat[1] | khmer_currency }}</div>
+        </div>
+        <div class="stat-icon green"><i class="fa-solid fa-check"></i></div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid #f59e0b;">
+        <div class="stat-info">
+            <div class="label">មិនទាន់បង់ ({{ unpaid_stat[0] }} ច្បាប់)</div>
+            <div class="value" style="color: #d97706; font-size: 20px;">{{ unpaid_stat[1] | khmer_currency }}</div>
+        </div>
+        <div class="stat-icon amber"><i class="fa-solid fa-clock"></i></div>
+    </div>
+
+    <div class="stat-card" style="border-left: 4px solid #ef4444;">
+        <div class="stat-info">
+            <div class="label">លើសកាលកំណត់ ({{ overdue_stat[0] }} ច្បាប់)</div>
+            <div class="value" style="color: #dc2626; font-size: 20px;">{{ overdue_stat[1] | khmer_currency }}</div>
+        </div>
+        <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    </div>
+</div>
+
+<!-- Filter Tabs & Search -->
+<div class="panel-card" style="margin-bottom: 20px;">
+    <div class="panel-body" style="padding: 16px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <!-- Status Tabs -->
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ url_for('invoices_list') }}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline{% endif %}">
+                    ទាំងអស់ (All)
+                </a>
+                <a href="{{ url_for('invoices_list', status='unpaid') }}" class="btn btn-sm {% if status_filter == 'unpaid' %}btn-primary{% else %}btn-outline{% endif %}">
+                    មិនទាន់បង់ (Unpaid)
+                </a>
+                <a href="{{ url_for('invoices_list', status='paid') }}" class="btn btn-sm {% if status_filter == 'paid' %}btn-primary{% else %}btn-outline{% endif %}">
+                    បង់រួច (Paid)
+                </a>
+                <a href="{{ url_for('invoices_list', status='overdue') }}" class="btn btn-sm {% if status_filter == 'overdue' %}btn-danger{% else %}btn-outline{% endif %}">
+                    លើសកាលកំណត់ (Overdue)
+                </a>
+            </div>
+
+            <!-- Search -->
+            <form method="GET" action="{{ url_for('invoices_list') }}" style="display: flex; gap: 8px;">
+                {% if status_filter %}
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                {% endif %}
+                <input type="text" name="q" value="{{ search_query }}" class="form-control" style="width: 260px;" placeholder="ស្វែងរកតាមលេខវិក្កយបត្រ, ឈ្មោះ...">
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Invoices Table -->
+<div class="panel-card">
+    <div class="panel-header">
+        <h3><i class="fa-solid fa-file-invoice"></i> តារាងវិក្កយបត្រ ({{ invoices|length }})</h3>
+        <a href="{{ url_for('export_invoices_csv') }}" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-file-csv" style="color: #10b981;"></i> ទាញយកជា Excel/CSV
+        </a>
+    </div>
+    <div class="panel-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>លេខវិក្កយបត្រ</th>
+                        <th>អតិថិជន</th>
+                        <th>លេខកុងទ័រ</th>
+                        <th>ថ្លៃថាមពល</th>
+                        <th>ថ្លៃថែទាំ + ពន្ធ</th>
+                        <th>បំណុលចាស់</th>
+                        <th>ទឹកប្រាក់សរុប</th>
+                        <th>កាលបរិច្ឆេទផុតកំណត់</th>
+                        <th>ស្ថានភាព</th>
+                        <th style="text-align: right;">សកម្មភាព</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in invoices %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('invoice_detail', id=inv.id) }}" style="font-weight: 700; color: #0284c7; text-decoration: none;">
+                                {{ inv.invoice_number }}
+                            </a>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">{{ inv.customer_name }}</div>
+                            <div style="font-size: 11px; color: #64748b;">{{ inv.customer_code }} ({{ inv.customer_type | khmer_type }})</div>
+                        </td>
+                        <td><code>{{ inv.meter_number }}</code></td>
+                        <td>{{ inv.energy_amount | khmer_currency }}</td>
+                        <td>{{ (inv.maintenance_fee + inv.tax) | khmer_currency }}</td>
+                        <td>
+                            {% if inv.prev_unpaid > 0 %}
+                                <span style="color: #ef4444; font-weight: 600;">{{ inv.prev_unpaid | khmer_currency }}</span>
+                            {% else %}
+                                <span style="color: #94a3b8;">0 ៛</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong style="font-size: 15px; color: #0f172a;">{{ inv.total_amount | khmer_currency }}</strong>
+                        </td>
+                        <td style="font-size: 12px; {% if inv.payment_status == 'overdue' %}color: #ef4444; font-weight: 700;{% endif %}">
+                            {{ inv.due_date }}
+                        </td>
+                        <td>
+                            {% set b_class, b_label = inv.payment_status | status_badge %}
+                            <span class="badge {{ b_class }}">{{ b_label }}</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{{ url_for('invoice_detail', id=inv.id) }}" class="btn btn-primary btn-sm">
+                                <i class="fa-solid fa-receipt"></i> មើលវិក្កយបត្រ
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: #94a3b8; padding: 32px;">
+                            រកមិនឃើញវិក្កយបត្រទេ
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

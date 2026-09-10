@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}របាយការណ៍សង្ខេប | EDC Billing{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1><i class="fa-solid fa-chart-pie" style="color: #0284c7;"></i> របាយការណ៍ហិរញ្ញវត្ថុ និងប្រតិបត្តិការ (Reports)</h1>
+        <p>ចំណូលសរុប បរិមាណភ្លើងលក់ចេញ និងស្ថិតិទូទាត់ប្រាក់</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('export_invoices_csv') }}" class="btn btn-primary">
+            <i class="fa-solid fa-file-excel"></i> ទាញយកទិន្នន័យ (Excel/CSV)
+        </a>
+        <a href="{{ url_for('reports_disconnections') }}" class="btn btn-outline" style="border-color: #ef4444; color: #dc2626;">
+            <i class="fa-solid fa-triangle-exclamation"></i> បញ្ជីកាត់ផ្ដាច់ចរន្ត
+        </a>
+    </div>
+</div>
+
+<!-- Financial Summary KPIs -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">ចំណូលប្រមូលបានជាក់ស្តែង</div>
+            <div class="value" style="color: #10b981;">{{ total_collected | khmer_currency }}</div>
+        </div>
+        <div class="stat-icon green"><i class="fa-solid fa-sack-dollar"></i></div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">បំណុលមិនទាន់ប្រមូល (Unpaid & Overdue)</div>
+            <div class="value" style="color: #ef4444;">{{ total_unpaid | khmer_currency }}</div>
+        </div>
+        <div class="stat-icon red"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-info">
+            <div class="label">បរិមាណភ្លើងលក់ចេញសរុប</div>
+            <div class="value">{{ "{:,.1f}".format(total_kwh_sold) }} <span style="font-size: 15px;">kWh</span></div>
+        </div>
+        <div class="stat-icon blue"><i class="fa-solid fa-bolt"></i></div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px;">
+    <!-- Payment Methods Stats -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-credit-card" style="color: #8b5cf6;"></i> វិធីសាស្ត្រទូទាត់ប្រាក់</h3>
+        </div>
+        <div class="panel-body">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>វិធីសាស្ត្រ</th>
+                        <th>ចំនួនប្រតិបត្តិការ</th>
+                        <th>ទឹកប្រាក់សរុប</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in method_stats %}
+                    <tr>
+                        <td>
+                            {% if m.payment_method == 'khqr_bakong' %}
+                                <span class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;">
+                                    <i class="fa-solid fa-qrcode"></i> Bakong KHQR
+                                </span>
+                            {% else %}
+                                <span class="badge" style="background: #f1f5f9; color: #334155;">
+                                    <i class="fa-solid fa-money-bill-wave"></i> សាច់ប្រាក់ (Cash)
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ m.count }} លើក</strong></td>
+                        <td><strong style="color: #166534;">{{ m.total | khmer_currency }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #94a3b8; padding: 20px;">មិនទាន់មានទិន្នន័យ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Power Consumers -->
+    <div class="panel-card">
+        <div class="panel-header">
+            <h3><i class="fa-solid fa-ranking-star" style="color: #f59e0b;"></i> អតិថិជនប្រើប្រាស់ថាមពលច្រើនជាងគេ (Top Consumers)</h3>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>អតិថិជន</th>
+                            <th>ប្រភេទ</th>
+                            <th>ការកត់ត្រា</th>
+                            <th style="text-align: right;">ថាមពលសរុប (kWh)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for top in top_consumers %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 700;">{{ top.name }}</div>
+                                <div style="font-size: 11px; color: #64748b;">{{ top.code }}</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ top.customer_type }}">
+                                    {{ top.customer_type | khmer_type }}
+                                </span>
+                            </td>
+                            <td>{{ top.read_count }} លើក</td>
+                            <td style="text-align: right;">
+                                <strong style="font-size: 15px; color: #0284c7;">{{ "{:,.1f}".format(top.total_kwh) }} kWh</strong>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">មិនទាន់មានទិន្នន័យ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
