@@ -14,7 +14,8 @@ from app import app
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    host = os.environ.get('HOST', '127.0.0.1')
+    default_host = '0.0.0.0' if os.environ.get('PORT') else '127.0.0.1'
+    host = os.environ.get('HOST', default_host)
     print("=" * 60)
     print("EDC Electricity Billing & Management System")
     print(f"Server running at: http://{host}:{port}")

@@ -62,6 +62,9 @@ git add .
 echo [*] Committing changes...
 git commit -m "%COMMIT_MSG%"
 
+echo [*] Checking for remote updates (auto-sync)...
+git pull origin main --rebase --autostash
+
 echo [*] Pushing to GitHub (origin main)...
 git branch -M main
 git push -u origin main

@@ -1,8 +1,8 @@
 import sqlite3
 import os
 from datetime import datetime, timedelta
-
-DB_NAME = "edc_billing.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "edc_billing.db"))
 
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)

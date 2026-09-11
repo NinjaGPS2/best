@@ -107,8 +107,21 @@ def status_badge_filter(val):
 
 @app.before_request
 def check_overdue():
-    # Keep overdue statuses up to date
-    models.update_overdue_invoices()
+    try:
+        # Keep overdue statuses up to date
+        models.update_overdue_invoices()
+    except Exception as e:
+        app.logger.error(f"Note: Error updating overdue invoices: {e}")
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    import traceback
+    app.logger.error(f"Internal Server Error 500: {e}\n{traceback.format_exc()}")
+    try:
+        return render_template('login.html', server_error="មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ សូមព្យាយាមម្ដងទៀត។"), 500
+    except Exception:
+        return f"<h3>Internal Server Error</h3><p>{e}</p>", 500
+
 
 # ==========================================
 # AUTHENTICATION ROUTES (LOGIN, REGISTER, USERS)
